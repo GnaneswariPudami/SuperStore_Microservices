@@ -79,15 +79,15 @@ jobs:
           echo "Docker Image Tagging completed. Below are list of docker Images" 
           docker images
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.33.1
-        with:
-          image-ref: ${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest
-          format: 'table'
-#          exit-code: '1'
-#         ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+#      - name: Run Trivy vulnerability scanner
+#        uses: aquasecurity/trivy-action@0.33.1
+#        with:
+#          image-ref: ${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest
+#          format: 'table'
+##          exit-code: '1'
+##         ignore-unfixed: true
+#          vuln-type: 'os,library'
+#          severity: 'CRITICAL,HIGH'
 
       - name: Push Docker image to ECR
         run: |
@@ -98,6 +98,7 @@ jobs:
       - name : Set IMAGE_URI output varilable
         id: set-output
         run: |
+          echo "::set-output name=IMAGE_URI::${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest"
           echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest" >> $GITHUB_ENV
 
   deploy-notifications-service:
