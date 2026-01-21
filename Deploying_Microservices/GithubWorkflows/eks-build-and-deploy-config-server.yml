@@ -91,4 +91,4 @@ jobs:
           cluster-name: superstore-eks-cluster
           region: ${{ env.AWS_REGION }}
           command: apply
-          args: -f DeployingMicroservices/Kubernetes/Config-Server/deployment.yaml
+          args: -f Deploying_Microservices/Kubernetes/Config-Server/deployment.yaml

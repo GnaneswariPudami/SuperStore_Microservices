@@ -90,14 +90,14 @@ jobs:
       # Replace deployment image name in deployment.yaml
       - name: Replace deployment image name in deployment.yaml
         run: |
-          cd DeployingMicroservices/Kubernetes/Config-Server
+          cd Deploying_Microservices/Kubernetes/Config-Server
           # Replace the image name in deployment.yaml with the ECR image URI
           sed -i "s|image: config-server:latest|image: ${{ env.IMAGE_URI }}|g" deployment.yaml
 
       # Deploy to EKS using kubectl
       - name: Deploy Config Server to EKS
         run: |
-          cd DeployingMicroservices/Kubernetes/Config-Server
+          cd Deploying_Microservices/Kubernetes/Config-Server
           aws eks update-kubeconfig --name superstore-eks-cluster-dev --region ${{ env.AWS_REGION }}
           kubectl apply -f .
          

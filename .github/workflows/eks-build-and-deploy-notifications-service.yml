@@ -109,14 +109,14 @@ jobs:
       # Replace deployment image name in deployment.yaml
       - name: Replace deployment image name in deployment.yaml
         run: |
-          cd DeployingMicroservices/Kubernetes/Notifications-Service
+          cd Deploying_Microservices/Kubernetes/Notifications-Service
           # Replace the image name in deployment.yaml with the ECR image URI
           sed -i "s|image: notifications-service:latest|image: ${{ env.IMAGE_URI }}|g" deployment.yaml
 
       # Deploy to EKS using kubectl
       - name: Deploy Notifications Service to EKS
         run: |
-          cd DeployingMicroservices/Kubernetes/Notifications-Service
+          cd Deploying_Microservices/Kubernetes/Notifications-Service
           aws eks update-kubeconfig --name superstore-eks-cluster-dev --region ${{ env.AWS_REGION }}
           kubectl apply -f .
          
