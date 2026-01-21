@@ -98,8 +98,7 @@ jobs:
       - name : Set IMAGE_URI output varilable
         id: set-output
         run: |
-          echo "::set-output name=IMAGE_URI::${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest"
-          echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest" >> $GITHUB_ENV
+          echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest" >> $GITHUB_OUTPUT
 
   deploy-notifications-service:
     name: Deploy Notifications Service to EKS
