@@ -6,13 +6,6 @@ metadata:
   labels:
     app: notifications
 spec:
-  env:
-    - name: CONFIG_SERVER_URL
-      value: "http://config-server-service.default:8888"
-    - name: SERVICE_PORT
-      value: "8080"
-    - name: AWS_REGION
-
   replicas: 1
   selector:
     matchLabels:
@@ -27,3 +20,10 @@ spec:
           image: notifications-service:1.0
           ports:
             - containerPort: 8080
+          env:
+            - name: CONFIG_SERVER_URL
+              value: "http://config-server-service.default:8888"
+            - name: SERVICE_PORT
+              value: "8080"
+            - name: AWS_REGION
+              value: "eu-west-2"
