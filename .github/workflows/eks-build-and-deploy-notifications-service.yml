@@ -105,6 +105,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Configure AWS credentials using OIDC (Recommended for security)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+
       # Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
@@ -117,14 +125,6 @@ jobs:
           echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest" >> $GITHUB_ENV
           # Replace the image name in deployment.yaml with the ECR image URI
           sed -i "s|image: notifications-service:latest|image: ${{ env.IMAGE_URI }}|g" deployment.yaml
-
-      # Configure AWS credentials using OIDC (Recommended for security)
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          audience: sts.amazonaws.com
-          aws-region: ${{ env.AWS_REGION }}
 
       # Deploy to EKS using kubectl
       - name: Deploy Notifications Service to EKS
