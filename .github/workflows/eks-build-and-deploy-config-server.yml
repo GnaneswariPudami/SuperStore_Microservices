@@ -7,7 +7,7 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ROLE_ARN: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/eks-github-actions-deploy-role"
   CONFIG_SERVER_ECR_REPOSITORY: "superstore-config-server"
-
+  VERSION: "V1.0"
 jobs:
   build-config-server:
     name: Build Configuration Server
@@ -75,13 +75,13 @@ jobs:
           cd build-config-server
           ls -lrt ./target
           docker build -t ${{ env.CONFIG_SERVER_ECR_REPOSITORY }} .
-          docker tag ${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:latest ${{ steps.login-ecr.outputs.registry }}/${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:latest
+          docker tag ${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:latest ${{ steps.login-ecr.outputs.registry }}/${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:${{ env.VERSION }}
           echo "Docker Image Tagging completed. Below are list of docker Images" 
           docker images
           echo "ECR Outputs Registry : " ${{ steps.login-ecr.outputs.registry }}
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:${{ env.VERSION }}
           echo "Docker Image Push completed" 
-          echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:latest" >> $GITHUB_ENV
+          echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:${{ env.VERSION }}" >> $GITHUB_ENV
 
       # Checkout the repository to access deployment files
       - name: Checkout code

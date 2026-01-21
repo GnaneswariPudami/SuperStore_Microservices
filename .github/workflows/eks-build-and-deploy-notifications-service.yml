@@ -7,7 +7,7 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ROLE_ARN: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/eks-github-actions-deploy-role"
   NOTIFICATIONS_SERVICE_ECR_REPOSITORY: "superstore-notifications-service"
-
+  VERSION: "V1.0"
 jobs:
   build-notifications-service:
     name: Build Notifications Service
@@ -90,7 +90,7 @@ jobs:
       - name: Push Docker image to ECR
         run: |
           echo "ECR Outputs Registry : " ${{ steps.login-ecr.outputs.registry }}
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
           echo "Docker Image Push completed"
 
   deploy-notifications-service:
@@ -123,7 +123,7 @@ jobs:
         run: |
           cd Deploying_Microservices/Kubernetes/Notifications-Service
           # Replace the image name in deployment.yaml with the ECR image URI
-          sed -i "s|image: notifications-service:latest|image: ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest|g" deployment.yaml
+          sed -i "s|image: notifications-service:latest|image: ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}|g" deployment.yaml
 
       # Deploy to EKS using kubectl
       - name: Deploy Notifications Service to EKS
