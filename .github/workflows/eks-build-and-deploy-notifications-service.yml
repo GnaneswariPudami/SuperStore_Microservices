@@ -109,12 +109,17 @@ jobs:
       # Replace deployment image name in deployment.yaml
       - name: Replace deployment image name in deployment.yaml
         run: |
-          ls -lrt
-          cd Superstore_Microservices
-          ls -lrt
           cd Deploying_Microservices/Kubernetes/Notifications-Service
           # Replace the image name in deployment.yaml with the ECR image URI
           sed -i "s|image: notifications-service:latest|image: ${{ env.IMAGE_URI }}|g" deployment.yaml
+
+      # Configure AWS credentials using OIDC (Recommended for security)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
 
       # Deploy to EKS using kubectl
       - name: Deploy Notifications Service to EKS
