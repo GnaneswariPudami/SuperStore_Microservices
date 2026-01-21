@@ -42,8 +42,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    outputs:
-      image_uri: ${{ steps.set-output.outputs.IMAGE_URI }}
     steps:
       - name: Download Artifacts - Notifications Service build jar file
         uses: actions/download-artifact@v4
@@ -95,14 +93,6 @@ jobs:
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest
           echo "Docker Image Push completed"
 
-      - name : Set IMAGE_URI output varilable
-        id: set-output
-        run: |
-          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest
-          echo "::add-mask::$IMAGE_URI"
-          IMAGE_URI_ENCRYPTED=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "$IMAGE_URI") | base64 -w0)
-          echo "IMAGE_URI=$IMAGE_URI_ENCRYPTED" >> $GITHUB_OUTPUT
-
   deploy-notifications-service:
     name: Deploy Notifications Service to EKS
     runs-on: ubuntu-latest
@@ -115,17 +105,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      #  Accept IMAGE_URI from previous job
-      - name: Set IMAGE_URI from previous job
-        run: |
-          IMAGE_URI_DECRYPTED=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" | base64 --decode))
-          
-          echo "IMAGE_URI=$IMAGE_URI_DECRYPTED" >> $GITHUB_ENV
+      # Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       # Replace deployment image name in deployment.yaml
       - name: Replace deployment image name in deployment.yaml
         run: |
           cd Deploying_Microservices/Kubernetes/Notifications-Service
+          echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest" >> $GITHUB_ENV
           # Replace the image name in deployment.yaml with the ECR image URI
           sed -i "s|image: notifications-service:latest|image: ${{ env.IMAGE_URI }}|g" deployment.yaml
 
