@@ -1,0 +1,7 @@
+aws:
+  s3:
+    bucket:
+      name: superstore-productservice
+  sqs:
+    queue:
+      url: https://sqs.eu-west-2.amazonaws.com/850995580792/superstore-productservice

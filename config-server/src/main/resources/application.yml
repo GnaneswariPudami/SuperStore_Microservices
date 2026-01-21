@@ -1,0 +1,12 @@
+server:
+  port: 8888
+spring:
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/GnaneswariPudami/SuperStore_Microservices/config-repo.git
+          username: gnaneswari.pudami@gmail.com
+          password: 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

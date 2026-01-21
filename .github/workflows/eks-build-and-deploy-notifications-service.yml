@@ -1,0 +1,122 @@
+name: EKS Build and Deploy Notifications Service
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ROLE_ARN: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/eks-github-actions-deploy-role"
+  NOTIFICATIONS_SERVICE_ECR_REPOSITORY: "superstore-notifications-service"
+
+jobs:
+  build-notifications-service:
+    name: Build Notifications Service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Java JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: .m2/repository
+          key: ${{ runner.os }}-maven-notifications-service-${{ hashFiles('notifications-service/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-notifications-service-
+      - name: Build Notifications Service
+        run: cd notifications && mvn clean install -B -Dmaven.test.skip=true
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: notifications
+          path: notifications
+
+  build-and-push-docker-image-to-ecr-notifications-service:
+    name: Build and push docker image to ECR for Notifications Service
+    runs-on: ubuntu-latest
+    needs: build-notifications-service
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download Artifacts - Notifications Service build jar file
+        uses: actions/download-artifact@v4
+        with:
+          name: notifications
+          path: build-notifications-service
+
+      - name: Display structure of notifications-service files
+        run: ls -R
+
+      # Configure AWS credentials using OIDC (Recommended for security)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Build, tag, and push Docker image for Notifications Service
+      - name: Build and push Docker image for Notifications Service
+        run: |
+          pwd
+          ls -lrt
+          cd build-notifications-service
+          ls -lrt ./target
+          docker build -t ${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }} .
+          docker tag ${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest
+          echo "Docker Image Tagging completed. Below are list of docker Images" 
+          docker images
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: false
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Push Docker image to ECR
+        run: |
+          echo "ECR Outputs Registry : " ${{ steps.login-ecr.outputs.registry }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest
+          echo "Docker Image Push completed" 
+          echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest" >> $GITHUB_ENV
+
+  deploy-notifications-service:
+    name: Deploy Notifications Service to EKS
+    runs-on: ubuntu-latest
+    needs: build-and-push-docker-image-to-ecr-notifications-service
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      # Checkout the repository to access deployment files
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Replace deployment image name in deployment.yaml
+      - name: Replace deployment image name in deployment.yaml
+        run: |
+          cd DeployingMicroservices/Kubernetes/Notifications-Service
+          # Replace the image name in deployment.yaml with the ECR image URI
+          sed -i "s|image: notifications-service:latest|image: ${{ env.IMAGE_URI }}|g" deployment.yaml
+
+      # Deploy to EKS using kubectl
+      - name: Deploy Notifications Service to EKS
+        run: |
+          cd DeployingMicroservices/Kubernetes/Notifications-Service
+          aws eks update-kubeconfig --name superstore-eks-cluster-dev --region ${{ env.AWS_REGION }}
+          kubectl apply -f .
+         

@@ -1,0 +1,20 @@
+{
+    \"name\": \"${{ env.CONFIG_SERVER_ECS_SERVICE_NAME }}-container\",
+    \"image\": \"${{ env.IMAGE_URI }}\",
+    \"portMappings\": [
+        {
+        \"containerPort\": 8888 
+        }
+    ],
+    \"environment\": [
+        { \"name\": \"SNS_TOPIC_ARN\", \"value\": \"Content-Server-Deployment-Notification-Topic\" }
+    ],
+    \"logConfiguration\": {
+        \"logDriver\": \"awslogs\",
+        \"options\": {
+        \"awslogs-group\": \"/ecs/${{ env.CONFIG_SERVER_ECS_SERVICE_NAME }}-container\",
+        \"awslogs-region\": \"${{ env.AWS_REGION }}\",
+        \"awslogs-stream-prefix\": \"ecs\"
+        }
+    }
+}

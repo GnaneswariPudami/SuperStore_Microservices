@@ -1,0 +1,22 @@
+#kubernetes deployment file for Product microservice
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-deployment
+  labels:
+    app: product
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product
+  template:
+    metadata:
+      labels:
+        app: product
+    spec:
+      containers:
+        - name: product
+          image: product-service:1.0
+          ports:
+            - containerPort: 8080

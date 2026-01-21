@@ -1,0 +1,39 @@
+{
+  "family": "CONFIG_SERVER_ECS_SERVICE_NAME-task",
+  "executionRoleArn": "arn:aws:iam::AWS_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512",
+  "requiresCompatibilities":
+  [
+    "FARGATE"
+  ],
+  "containerDefinitions":
+  [
+    {
+      "name": "CONFIG_SERVER_ECS_SERVICE_NAME-container",
+      "image": "ECR_REPO_URI:latest",
+      "portMappings":
+      [
+        {
+          "containerPort": 8888,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "SNS_TOPIC_ARN", "value": "Content-Server-Deployment-Notification-Topic" }
+      ],
+      "essential": true,
+      "logConfiguration":
+      {
+        "logDriver": "awslogs",
+        "options":
+        {
+          "awslogs-group": "AWS_LOG_GROUP_NAME",
+          "awslogs-region": "AWS_LOGS_REGION",
+          "awslogs-stream-prefix": "AWS_LOG_STREAM_PREFIX"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+pipeline {
+    agent any
+
+    tools {
+        // Install the Maven version configured as "M3" and add it to the path.
+        maven "3.9.9"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // If you added the private key as a Secret Text credential in Jenkins
+                // with ID 'github-ssh-key'
+                sshagent(['github-ssh-key']) {
+                    git branch: 'main', credentialsId: 'github-ssh-key', url: 'git@github.com:GnaneswariPudami/SuperStore_Microservices.git'
+                    // Or a raw sh command:
+                    // sh 'git clone git@github.com:GnaneswariPudami/SuperStore_Microservices.git'
+                }
+            }
+        }
+        stage('Build') {
+            steps {
+                // Get some code from a GitHub repository
+                git 'git@github.com:GnaneswariPudami/SuperStore_Microservices.git'
+
+                // Run Maven on a Unix agent.
+                sh "cd notifications"
+                sh "mvn -Dmaven.test.failure.ignore=true clean package"
+
+            }
+
+            post {
+                // If Maven was able to run the tests, even if some of the test
+                // failed, record the test results and archive the jar file.
+                success {
+                    //junit '**/target/surefire-reports/TEST-*.xml'
+                    archiveArtifacts 'target/*.jar'
+                }
+            }
+        }
+    }
+}

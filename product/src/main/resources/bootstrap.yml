@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: product-service
+  config:
+    import: optional:configserver:http://18.175.224.12:8888

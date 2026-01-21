@@ -1,0 +1,29 @@
+name: Build User Account Microservices
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-useraccount-service:
+    name: Build User account Service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Java JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21' # Adjust as needed
+          distribution: 'temurin'
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: .m2/repository
+          key: ${{ runner.os }}-maven-useraccount-${{ hashFiles('useraccount/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-useraccount-
+      - name: Build Useraccount service
+        run: cd useraccount && mvn clean install package -Dmaven.test.skip=true -U

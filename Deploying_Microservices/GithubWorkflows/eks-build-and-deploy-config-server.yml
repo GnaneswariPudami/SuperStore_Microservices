@@ -1,0 +1,94 @@
+name: EKS Build and Deploy Config Server
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ROLE_ARN: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/eks-github-actions-deploy-role"
+  CONFIG_SERVER_ECR_REPOSITORY: "superstore-config-server"
+
+jobs:
+  build-config-server:
+    name: Build Configuration Server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Java JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: .m2/repository
+          key: ${{ runner.os }}-maven-config-server-${{ hashFiles('config-server/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-config-server-
+      - name: Build Config Server
+        run: cd config-server && mvn clean install -B -Dmaven.test.skip=true
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: config-server
+          path: config-server
+
+  deploy-config-server:
+    name: Deploy Config Server in ECS
+    runs-on: ubuntu-latest
+    needs: build-config-server
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+
+      - name: Download Artifacts - Config server build jar file
+        uses: actions/download-artifact@v4
+        with:
+          name: config-server
+          path: build-config-server
+
+      - name: Display structure of config-server files
+        run: ls -R
+
+      # Configure AWS credentials using OIDC (Recommended for security)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Build, tag, and push Docker image for Config Server
+      - name: Build and push Docker image for Config Server
+        run: |
+          pwd
+          ls -lrt
+          cd build-config-server
+          ls -lrt ./target
+          docker build -t ${{ env.CONFIG_SERVER_ECR_REPOSITORY }} .
+          echo "Github SHA" ${{ github.sha }} 
+          docker tag ${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:latest ${{ steps.login-ecr.outputs.registry }}/${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:${{ github.sha }}
+          echo "Docker Image Tagging completed. Below are list of docker Images" 
+          docker images
+          echo "ECR Outputs Registry : " ${{ steps.login-ecr.outputs.registry }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:${{ github.sha }}
+          echo "Docker Image Push completed" 
+          echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.CONFIG_SERVER_ECR_REPOSITORY }}:${{ github.sha }}" >> $GITHUB_ENV
+
+      # Deploy to EKS using kubectl
+      - name: Deploy Config Server to EKS
+        uses: aws/eks-kubectl@v1
+        with:
+          cluster-name: superstore-eks-cluster
+          region: ${{ env.AWS_REGION }}
+          command: apply
+          args: -f DeployingMicroservices/Kubernetes/Config-Server/deployment.yaml

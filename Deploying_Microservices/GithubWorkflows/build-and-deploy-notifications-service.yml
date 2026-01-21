@@ -1,0 +1,173 @@
+name: Build Notifications Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - test
+          - stage
+          - prod
+env:
+  AWS_REGION: "eu-west-2"
+  AWS_ROLE_ARN: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsDeployRole"
+  NOTIFICATIONS_ECR_REPOSITORY: "superstore/notification-service"
+  NOTIFICATIONS_ECS_SERVICE_NAME: "notification-service"
+  GITHUB_REPO_NAME: "GnaneswariPudami/SuperStore_Microservices"
+  ECS_CLUSTER_NAME: "SuperStore-MicroServices-Cluster"
+  AWS_LOG_GROUP_NAME: "notification-service-log-group"
+  AWS_LOG_STREAM_PREFIX: "ecs"
+jobs:
+  build-notifications:
+    name: Build Notification Service
+    runs-on: ubuntu-latest
+    env:
+      SPRING_PROFILES_ACTIVE: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Java JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: .m2/repository
+          key: ${{ runner.os }}-maven-notification-service-${{ hashFiles('notifications/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-notification-service-
+      - name: Build Notification Service
+        run: cd notifications && mvn clean install -B -Dmaven.test.skip=true -Dspring.profiles.active=${{ env.SPRING_PROFILES_ACTIVE }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: notifications
+          path: notifications
+
+  deploy-notifications-service:
+    name: Deploy Notifications Service in ECS
+    runs-on: ubuntu-latest
+    needs: build-notifications
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+
+      - name: Download Artifacts - Config server build jar file
+        uses: actions/download-artifact@v4
+        with:
+          name: notifications
+          path: build-notifications
+
+      - name: Display structure of notifications files
+        run: ls -R
+
+      # Configure AWS credentials using OIDC (Recommended for security)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Create ECR Repository if it doesn't exist
+      - name: Create ECR Repository if it doesn't exist
+        run: |
+            echo "Checking if repository ${{ env.NOTIFICATIONS_ECR_REPOSITORY }} exists in ${{ env.AWS_REGION }}..."
+            # Attempt to describe the repository. If it fails (exit code non-zero), create it.
+            aws ecr describe-repositories --repository-name "${{ env.NOTIFICATIONS_ECR_REPOSITORY }}" --region "${{ env.AWS_REGION }}" || \
+            ( echo "Repository ${{ env.NOTIFICATIONS_ECR_REPOSITORY }} not found. Creating..." && \
+            aws ecr create-repository --repository-name "${{ env.NOTIFICATIONS_ECR_REPOSITORY }}" --region "${{ env.AWS_REGION }}" )
+
+      # Build, tag, and push Docker image for Config Server
+      - name: Build and push Docker image for Config Server
+        if: github.repository == env.GITHUB_REPO_NAME # Adjust repository name
+        run: |
+          pwd
+          cd build-notifications
+          ls -lrt ./target
+          docker build -t ${{ env.NOTIFICATIONS_ECR_REPOSITORY }} .
+          echo "Github SHA" ${{ github.sha }} 
+          docker tag ${{ env.NOTIFICATIONS_ECR_REPOSITORY }}:latest ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_ECR_REPOSITORY }}:${{ github.sha }}
+          echo "Docker Image Tagging completed. Below are list of docker Images" 
+          docker images
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_ECR_REPOSITORY }}:${{ github.sha }}
+          echo "Docker Image Push completed" 
+          echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_ECR_REPOSITORY }}:${{ github.sha }}" >> $GITHUB_ENV
+
+      # Substitute variables in task-definition.json
+      - name: Substitute variables in task-definition.json
+        run: |
+          pwd
+          cd build-notifications/task-definitions
+          # Replace the AWS Account ID
+          sed -i "s|AWS_ACCOUNT_ID|${{ secrets.AWS_ACCOUNT_ID }}|g" task-definition.json
+           # Replace the Config Server ECS Service Name
+          sed -i "s|NOTIFICATIONS_ECS_SERVICE_NAME|${{ env.NOTIFICATIONS_ECS_SERVICE_NAME }}|g" task-definition.json
+          # Replace Image URI
+          sed -i "s|ECR_REPO_URI|${{ env.IMAGE_URI }}|g" task-definition.json
+          # Replace the logs AWS Region
+          sed -i "s|AWS_LOGS_REGION|${{ env.AWS_REGION }}|g" task-definition.json
+          # Replace the Log Group Name
+          sed -i "s|AWS_LOG_GROUP_NAME|${{ env.AWS_LOG_GROUP_NAME }}|g" task-definition.json
+          # Replace the Log Group Name
+          sed -i "s|AWS_LOG_STREAM_PREFIX|${{ env.AWS_LOG_STREAM_PREFIX }}|g" task-definition.json
+
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+      # This is the new step to explicitly register the task definition with ECS.
+      - name: Register new task definition revision
+        id: register-task-def
+        run: |
+          cd build-notifications/task-definitions
+          TASK_DEFINITION_ARN=$(aws ecs register-task-definition --cli-input-json file://task-definition.json | jq -r '.taskDefinition.taskDefinitionArn')
+          echo "task_definition_arn=$TASK_DEFINITION_ARN" >> $GITHUB_OUTPUT
+
+      # Create ECS Service if it doesn't exist
+      - name: Create ECS Service if it doesn't exist
+        id: create-service
+        run: |
+          pwd
+          # Check if the service already exists
+          SERVICE_COUNT=$(aws ecs describe-services --cluster ${{ env.ECS_CLUSTER_NAME }} --services ${{ env.NOTIFICATIONS_ECS_SERVICE_NAME }} --query 'services[?status==`ACTIVE`] | length(@)')
+          echo 'Services Count = '$SERVICE_COUNT
+          if [ "$SERVICE_COUNT" -eq 0 ]; then
+            echo "ECS service ${{ env.NOTIFICATIONS_ECS_SERVICE_NAME }} not found. Creating it..."
+            aws ecs create-service \
+              --cluster ${{ env.ECS_CLUSTER_NAME }} \
+              --service-name ${{ env.NOTIFICATIONS_ECS_SERVICE_NAME }} \
+              --task-definition ${{ steps.register-task-def.outputs.task_definition_arn }} \
+              --desired-count 1 \
+              --launch-type "FARGATE" \
+              --network-configuration "awsvpcConfiguration={subnets=[subnet-093298cba0d0d336c,subnet-0f03d741709e5662a],securityGroups=[sg-00ac0bc7dea7d4cff],assignPublicIp=ENABLED}"
+            echo "service_created=true" >> $GITHUB_OUTPUT
+          else
+            echo "ECS service ${{ env.NOTIFICATIONS_ECS_SERVICE_NAME }} already exists. Skipping creation."
+            echo "service_created=false" >> $GITHUB_OUTPUT
+            echo ${{ steps.register-task-def.outputs.task_definition_arn }}
+          fi
+
+      #  Deploy the new task definition to the ECS service
+      - name: Deploy the new task definition to the ECS service
+        if: ${{ steps.create-service.outputs.service_created == 'false' }}
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.register-task-def.outputs.task_definition_arn }}
+          service: ${{ env.NOTIFICATIONS_ECS_SERVICE_NAME }}
+          cluster: ${{ env.ECS_CLUSTER_NAME }}
+          wait-for-service-stability: true
+

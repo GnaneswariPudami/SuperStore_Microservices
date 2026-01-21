@@ -1,0 +1,29 @@
+name: Build Microservices
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-order-service:
+    name: Build Order Service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Java JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21' # Adjust as needed
+          distribution: 'temurin'
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: .m2/repository
+          key: ${{ runner.os }}-maven-order-${{ hashFiles('order/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-order-
+      - name: Build Order service
+        run: cd order && mvn clean install package -Dmaven.test.skip=true -U

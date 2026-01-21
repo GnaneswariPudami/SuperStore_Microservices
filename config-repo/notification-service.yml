@@ -1,0 +1,4 @@
+aws:
+  sns:
+    topic:
+      arn: arn:aws:sns:eu-west-2:038686090033:superstore-notifications

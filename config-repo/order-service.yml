@@ -1,0 +1,3 @@
+PRODUCT_SERVICE_URL: "http://localhost:8081/product-service/product?product_id="
+USERACCOUNT_SERVICE_URL: "http://localhost:8082/useraccount-service/user?user_id="
+NOTIFICATION_SERVICE_URL: "http://localhost:8080/send"

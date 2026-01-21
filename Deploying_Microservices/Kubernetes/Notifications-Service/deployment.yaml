@@ -1,0 +1,29 @@
+#kubernetes deployment file for Notifications microservice
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications-deployment
+  labels:
+    app: notifications
+spec:
+  env:
+    - name: CONFIG_SERVER_URL
+      value: "http://config-server-service.default:8888"
+    - name: SERVICE_PORT
+      value: "8080"
+    - name: AWS_REGION
+
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notifications
+  template:
+    metadata:
+      labels:
+        app: notifications
+    spec:
+      containers:
+        - name: notifications
+          image: notifications-service:1.0
+          ports:
+            - containerPort: 8080

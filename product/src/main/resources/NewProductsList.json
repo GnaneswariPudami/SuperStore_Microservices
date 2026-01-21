@@ -1,0 +1,102 @@
+[
+  {
+    "product_id" : 1000006,
+    "product_name": "Laptop Pro X15",
+    "price": 1299.99
+  },
+  {
+    "product_id" : 1000007,
+    "product_name": "Wireless Mouse M200",
+    "price": 24.50
+  },
+  {
+    "product_id" : 1000008,
+    "product_name": "External SSD 1TB",
+    "price": 149.00
+  },
+  {
+    "product_id" : 1000009,
+    "product_name": "Smartwatch Active 3",
+    "price": 199.95
+  },
+  {
+    "product_id" : 1000010,
+    "product_name": "Bluetooth Headphones Q45",
+    "price": 89.99
+  },
+  {
+    "product_id" : 1000011,
+    "product_name": "Portable Speaker Mini",
+    "price": 39.99
+  },
+  {
+    "product_id" : 1000012,
+    "product_name": "Digital Camera DSLR 5000",
+    "price": 549.00
+  },
+  {
+    "product_id" : 1000013,
+    "product_name": "Gaming Keyboard RGB",
+    "price": 69.50
+  },
+  {
+    "product_id" : 1000014,
+    "product_name": "Office Chair Ergonomic",
+    "price": 249.00
+  },
+  {
+    "product_id" : 1000015,
+    "product_name": "Coffee Maker Deluxe",
+    "price": 79.99
+  },
+  {
+    "product_id" : 1000016,
+    "product_name": "Running Shoes UltraBoost",
+    "price": 119.95
+  },
+  {
+    "product_id" : 1000017,
+    "product_name": "Cookware Set 10-Piece",
+    "price": 179.00
+  },
+  {
+    "product_id" : 1000018,
+    "product_name": "Backpack Travel Pro",
+    "price": 59.99
+  },
+  {
+    "product_id" : 1000019,
+    "product_name": "Tablet Android 10 Inch",
+    "price": 229.00
+  },
+  {
+    "product_id" : 1000020,
+    "product_name": "Smart Bulb Color",
+    "price": 19.99
+  },
+  {
+    "product_id" : 1000021,
+    "product_name": "Desk Lamp LED",
+    "price": 34.50
+  },
+  {
+    "product_id" : 1000022,
+    "product_name": "Fitness Tracker Band",
+    "price": 49.95
+  },
+  {
+    "product_id" : 1000023,
+    "product_name": "Electric Toothbrush Pro",
+    "price": 64.00
+  },
+  {
+    "product_id" : 1000024,
+    "product_name": "Air Purifier Small",
+    "price": 99.00
+  },
+  {
+    "product_id" : 1000025,
+    "product_name": "Garden Tool Set",
+    "price": 45.00
+  }
+]
