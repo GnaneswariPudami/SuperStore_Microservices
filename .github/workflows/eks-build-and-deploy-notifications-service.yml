@@ -98,7 +98,10 @@ jobs:
       - name : Set IMAGE_URI output varilable
         id: set-output
         run: |
-          echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest" >> $GITHUB_OUTPUT
+          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest
+          echo "::add-mask::$IMAGE_URI"
+          IMAGE_URI_ENCRYPTED=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "$IMAGE_URI") | base64 -w0)
+          echo "IMAGE_URI=$IMAGE_URI_ENCRYPTED" >> $GITHUB_OUTPUT
 
   deploy-notifications-service:
     name: Deploy Notifications Service to EKS
@@ -115,7 +118,9 @@ jobs:
       #  Accept IMAGE_URI from previous job
       - name: Set IMAGE_URI from previous job
         run: |
-          echo "IMAGE_URI=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" >> $GITHUB_ENV
+          IMAGE_URI_DECRYPTED=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" | base64 --decode))
+          
+          echo "IMAGE_URI=$IMAGE_URI_DECRYPTED" >> $GITHUB_ENV
 
       # Replace deployment image name in deployment.yaml
       - name: Replace deployment image name in deployment.yaml
