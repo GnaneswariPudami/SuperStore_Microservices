@@ -122,9 +122,8 @@ jobs:
       - name: Replace deployment image name in deployment.yaml
         run: |
           cd Deploying_Microservices/Kubernetes/Notifications-Service
-          echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest" >> $GITHUB_ENV
           # Replace the image name in deployment.yaml with the ECR image URI
-          sed -i "s|image: notifications-service:latest|image: ${{ env.IMAGE_URI }}|g" deployment.yaml
+          sed -i "s|image: notifications-service:latest|image: ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest|g" deployment.yaml
 
       # Deploy to EKS using kubectl
       - name: Deploy Notifications Service to EKS
