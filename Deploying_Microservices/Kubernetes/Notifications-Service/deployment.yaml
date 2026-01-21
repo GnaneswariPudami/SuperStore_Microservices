@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: notifications
-          image: notifications-service:1.0
+          image: notifications-service:latest
           ports:
             - containerPort: 8080
           env:
