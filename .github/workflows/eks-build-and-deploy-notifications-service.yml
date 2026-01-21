@@ -42,6 +42,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    outputs:
+      image_uri: ${{ steps.set-output.outputs.IMAGE_URI }}
     steps:
       - name: Download Artifacts - Notifications Service build jar file
         uses: actions/download-artifact@v4
@@ -91,8 +93,13 @@ jobs:
         run: |
           echo "ECR Outputs Registry : " ${{ steps.login-ecr.outputs.registry }}
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest
-          echo "Docker Image Push completed" 
-          echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest" >> $GITHUB_ENV
+          echo "Docker Image Push completed"
+
+      - name : Set IMAGE_URI output varilable
+        id: set-output
+        run: |
+          echo "::set-output name=IMAGE_URI::${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest"
+#         echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest" >> $GITHUB_ENV
 
   deploy-notifications-service:
     name: Deploy Notifications Service to EKS
@@ -105,6 +112,11 @@ jobs:
       # Checkout the repository to access deployment files
       - name: Checkout code
         uses: actions/checkout@v4
+
+      #  Accept IMAGE_URI from previous job
+      - name: Set IMAGE_URI from previous job
+        run: |
+          echo "IMAGE_URI=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" >> $GITHUB_ENV
 
       # Replace deployment image name in deployment.yaml
       - name: Replace deployment image name in deployment.yaml
