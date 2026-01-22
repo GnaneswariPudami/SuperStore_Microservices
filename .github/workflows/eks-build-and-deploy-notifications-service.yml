@@ -102,10 +102,11 @@ jobs:
         run: |
           IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
           echo "::add-mask::$IMAGE_URI"
+          test_var2="hellow world"
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
+          echo "test_var2=$test_var2" >> $GITHUB_OUTPUT
 #          IMAGE_URI_ENCRYPTED=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "$IMAGE_URI") | base64 -w0)
 #          echo "IMAGE_URI=$IMAGE_URI_ENCRYPTED" >> $GITHUB_OUTPUT
-          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
-          echo "test_var2=hello world" >> $GITHUB_OUTPUT
 
   deploy-notifications-service:
     name: Deploy Notifications Service to EKS
