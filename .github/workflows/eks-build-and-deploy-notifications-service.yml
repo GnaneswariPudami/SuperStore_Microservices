@@ -97,12 +97,12 @@ jobs:
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
           echo "Docker Image Push completed"
 
-      - name : Set IMAGE_URI output varilable
+      - name : Set IMAGE_URI output variable
         id: set-output
         run: |
           IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
           echo "::add-mask::$IMAGE_URI"
-          test_var2="hellow world"
+          test_var2="hello world"
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
           echo "test_var2=$test_var2" >> $GITHUB_OUTPUT
 #          IMAGE_URI_ENCRYPTED=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "$IMAGE_URI") | base64 -w0)
