@@ -43,9 +43,7 @@ jobs:
       id-token: write
       contents: read
     outputs:
-      image_uri: ${{ steps.set-output.outputs.IMAGE_URI }}
-      test_var1: "test_value"
-      test_var2: ${{ steps.set-output.outputs.test_var2 }}
+      image_uri: ${{ steps.set-output.outputs.image_uri }}
     steps:
       - name: Download Artifacts - Notifications Service build jar file
         uses: actions/download-artifact@v4
@@ -97,14 +95,12 @@ jobs:
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
           echo "Docker Image Push completed"
 
-      - name : Set IMAGE_URI output variable
+      - name : Set image_uri output variable
         id: set-output
         run: |
-          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
-          echo "::add-mask::$IMAGE_URI"
-          test_var2="hello world"
-          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
-          echo "test_var2=$test_var2" >> $GITHUB_OUTPUT
+          image_uri=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
+          echo "::add-mask::$image_uri"
+          echo "image_uri=$image_uri" >> $GITHUB_OUTPUT
 #          IMAGE_URI_ENCRYPTED=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "$IMAGE_URI") | base64 -w0)
 #          echo "IMAGE_URI=$IMAGE_URI_ENCRYPTED" >> $GITHUB_OUTPUT
 
@@ -123,10 +119,8 @@ jobs:
       #  Accept IMAGE_URI from previous job
       - name: Set IMAGE_URI from previous job
         run: |
-          echo "IMAGE_URI=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}"
-          echo "test_var1=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.test_var1 }}" 
-          echo "test_var2=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.test_var2 }}"
-          echo "IMAGE_URI=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" >> $GITHUB_ENV
+          echo "image_uri=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}"
+          echo "image_uri=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" >> $GITHUB_ENV
 #          IMAGE_URI_DECRYPTED=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" | base64 --decode))
 #          echo "IMAGE_URI=$IMAGE_URI_DECRYPTED" >> $GITHUB_ENV
 
@@ -135,7 +129,7 @@ jobs:
         run: |
           cd Deploying_Microservices/Kubernetes/Notifications-Service
           # Replace the image name in deployment.yaml with the ECR image URI
-          sed -i "s|image: notifications-service:latest|image: ${{ env.IMAGE_URI }}|g" deployment.yaml
+          sed -i "s|image: notifications-service:latest|image: ${{ env.image_uri }}|g" deployment.yaml
 
       # Configure AWS credentials using OIDC (Recommended for security)
       - name: Configure AWS credentials
