@@ -44,6 +44,8 @@ jobs:
       contents: read
     outputs:
       image_uri: ${{ steps.set-output.outputs.IMAGE_URI }}
+      test_var1: "test_value"
+      test_var2: ${{ steps.set-output.outputs.test_var2 }}
     steps:
       - name: Download Artifacts - Notifications Service build jar file
         uses: actions/download-artifact@v4
@@ -100,8 +102,10 @@ jobs:
         run: |
           IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
           echo "::add-mask::$IMAGE_URI"
-          IMAGE_URI_ENCRYPTED=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "$IMAGE_URI") | base64 -w0)
-          echo "IMAGE_URI=$IMAGE_URI_ENCRYPTED" >> $GITHUB_OUTPUT
+#          IMAGE_URI_ENCRYPTED=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "$IMAGE_URI") | base64 -w0)
+#          echo "IMAGE_URI=$IMAGE_URI_ENCRYPTED" >> $GITHUB_OUTPUT
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
+          echo "test_var2=hello world" >> $GITHUB_OUTPUT
 
   deploy-notifications-service:
     name: Deploy Notifications Service to EKS
@@ -118,10 +122,12 @@ jobs:
       #  Accept IMAGE_URI from previous job
       - name: Set IMAGE_URI from previous job
         run: |
-          IMAGE_URI_DECRYPTED=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" | base64 --decode))
-          
-          echo "IMAGE_URI=$IMAGE_URI_DECRYPTED" >> $GITHUB_ENV
-
+          echo "${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}"
+#          IMAGE_URI_DECRYPTED=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" | base64 --decode))
+#          echo "IMAGE_URI=$IMAGE_URI_DECRYPTED" >> $GITHUB_ENV
+          echo "IMAGE_URI=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" >> $GITHUB_ENV
+          echo "test_var1=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.test_var1 }}" 
+          echo "test_var2=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.test_var2 }}"
       # Replace deployment image name in deployment.yaml
       - name: Replace deployment image name in deployment.yaml
         run: |
