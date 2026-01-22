@@ -61,6 +61,11 @@ jobs:
           audience: sts.amazonaws.com
           aws-region: ${{ env.AWS_REGION }}
 
+      # Configure ECR login
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
       # Build, tag, and push Docker image for Notifications Service
       - name: Build and push Docker image for Notifications Service
         run: |
