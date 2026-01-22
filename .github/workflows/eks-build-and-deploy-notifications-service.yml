@@ -98,7 +98,7 @@ jobs:
       - name : Set image_uri output variable
         id: set-output
         run: |
-          image_uri=${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
+          image_uri=${{ steps.login-ecr.outputs.registry }}
           echo "::add-mask::$image_uri"
           echo "image_uri=$image_uri" >> $GITHUB_OUTPUT
 #          IMAGE_URI_ENCRYPTED=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "$IMAGE_URI") | base64 -w0)
@@ -119,8 +119,8 @@ jobs:
       #  Accept IMAGE_URI from previous job
       - name: Set IMAGE_URI from previous job
         run: |
-          echo "image_uri=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}"
-          echo "image_uri=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" >> $GITHUB_ENV
+          echo "image_uri=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}"
+          echo "image_uri=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}" >> $GITHUB_ENV
 #          IMAGE_URI_DECRYPTED=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" | base64 --decode))
 #          echo "IMAGE_URI=$IMAGE_URI_DECRYPTED" >> $GITHUB_ENV
 
