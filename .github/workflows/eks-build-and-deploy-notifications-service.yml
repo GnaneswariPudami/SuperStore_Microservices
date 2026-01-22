@@ -6,6 +6,7 @@ on:
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ROLE_ARN: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/eks-github-actions-deploy-role"
+  ECR_REGISTRY: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
   NOTIFICATIONS_SERVICE_ECR_REPOSITORY: "superstore-notifications-service"
   VERSION: "V1.0"
 jobs:
@@ -42,8 +43,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    outputs:
-      image_uri: ${{ steps.set-output.outputs.image_uri }}
     steps:
       - name: Download Artifacts - Notifications Service build jar file
         uses: actions/download-artifact@v4
@@ -62,11 +61,6 @@ jobs:
           audience: sts.amazonaws.com
           aws-region: ${{ env.AWS_REGION }}
 
-      # Login to Amazon ECR
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
       # Build, tag, and push Docker image for Notifications Service
       - name: Build and push Docker image for Notifications Service
         run: |
@@ -75,7 +69,7 @@ jobs:
           cd build-notifications-service
           ls -lrt ./target
           docker build -t ${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }} .
-          docker tag ${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
+          docker tag ${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:latest ${{ env.ECR_REGISTRY }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
           echo "Docker Image Tagging completed. Below are list of docker Images" 
           docker images
 
@@ -91,18 +85,9 @@ jobs:
 
       - name: Push Docker image to ECR
         run: |
-          echo "ECR Outputs Registry : " ${{ steps.login-ecr.outputs.registry }}
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
+          echo "ECR Outputs Registry : " ${{ env.ECR_REGISTRY }}
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}
           echo "Docker Image Push completed"
-
-      - name : Set image_uri output variable
-        id: set-output
-        run: |
-          image_uri=${{ steps.login-ecr.outputs.registry }}
-          echo "::add-mask::$image_uri"
-          echo "image_uri=$image_uri" >> $GITHUB_OUTPUT
-#          IMAGE_URI_ENCRYPTED=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "$IMAGE_URI") | base64 -w0)
-#          echo "IMAGE_URI=$IMAGE_URI_ENCRYPTED" >> $GITHUB_OUTPUT
 
   deploy-notifications-service:
     name: Deploy Notifications Service to EKS
@@ -116,20 +101,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      #  Accept IMAGE_URI from previous job
-      - name: Set IMAGE_URI from previous job
-        run: |
-          echo "image_uri=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}"
-          echo "image_uri=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}" >> $GITHUB_ENV
-#          IMAGE_URI_DECRYPTED=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" | base64 --decode))
-#          echo "IMAGE_URI=$IMAGE_URI_DECRYPTED" >> $GITHUB_ENV
-
       # Replace deployment image name in deployment.yaml
       - name: Replace deployment image name in deployment.yaml
         run: |
           cd Deploying_Microservices/Kubernetes/Notifications-Service
           # Replace the image name in deployment.yaml with the ECR image URI
-          sed -i "s|image: notifications-service:latest|image: ${{ env.image_uri }}|g" deployment.yaml
+          sed -i "s|image: notifications-service:latest|image: ${{ env.ECR_REGISTRY }}/${{ env.NOTIFICATIONS_SERVICE_ECR_REPOSITORY }}:${{ env.VERSION }}|g" deployment.yaml
 
       # Configure AWS credentials using OIDC (Recommended for security)
       - name: Configure AWS credentials
