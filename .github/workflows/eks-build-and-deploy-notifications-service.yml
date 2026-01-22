@@ -123,12 +123,13 @@ jobs:
       #  Accept IMAGE_URI from previous job
       - name: Set IMAGE_URI from previous job
         run: |
-          echo "${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}"
-#          IMAGE_URI_DECRYPTED=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" | base64 --decode))
-#          echo "IMAGE_URI=$IMAGE_URI_DECRYPTED" >> $GITHUB_ENV
-          echo "IMAGE_URI=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" >> $GITHUB_ENV
+          echo "IMAGE_URI=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}"
           echo "test_var1=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.test_var1 }}" 
           echo "test_var2=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.test_var2 }}"
+          echo "IMAGE_URI=${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" >> $GITHUB_ENV
+#          IMAGE_URI_DECRYPTED=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.build-and-push-docker-image-to-ecr-notifications-service.outputs.image_uri }}" | base64 --decode))
+#          echo "IMAGE_URI=$IMAGE_URI_DECRYPTED" >> $GITHUB_ENV
+
       # Replace deployment image name in deployment.yaml
       - name: Replace deployment image name in deployment.yaml
         run: |
